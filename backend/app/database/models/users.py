@@ -13,7 +13,7 @@ class User(Base):
     last_name: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(150), unique=True)
     phone: Mapped[str] = mapped_column(String(40), unique=True)
-    password: Mapped[str] = mapped_column()
+    hashed_password: Mapped[str] = mapped_column()
     image_url: Mapped[str | None] = mapped_column(String(255))
     is_admin: Mapped[bool] = mapped_column(server_default="false")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

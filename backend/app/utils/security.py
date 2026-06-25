@@ -49,7 +49,10 @@ def create_refresh_token(data: dict, expires_delta: timedelta | None = None):
 def decode_access_token(token: str) -> dict:
     """Decode JWT token with access secret key"""
     try:
-        return jwt.decode(token, settings.access_secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.access_secret_key, algorithms=[settings.algorithm])
+        if payload.get("type") != "access":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="It's not an access token")
+        return payload
     except ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token expired")
     except PyJWTError:
@@ -59,7 +62,10 @@ def decode_access_token(token: str) -> dict:
 def decode_refresh_token(token: str) -> dict:
     """Decode JWT token with refresh secret key"""
     try:
-        return jwt.decode(token, settings.refresh_secret_key, algorithms=[settings.algorithm])
+        payload = jwt.decode(token, settings.refresh_secret_key, algorithms=[settings.algorithm])
+        if payload.get("type") != "refresh":
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="It's not a refresh token")
+        return payload
     except ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token expired")
     except PyJWTError:
