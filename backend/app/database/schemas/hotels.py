@@ -4,6 +4,10 @@ from datetime import datetime
 class HotelBase(BaseModel):
     name: str
     description: str | None = None
+    country: str
+    city: str
+    address: str
+    zip_code: str | None = None
 
 
 class HotelCreate(HotelBase):
@@ -21,3 +25,7 @@ class HotelResponse(HotelBase):
 class HotelUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
+    country: str | None = None
+    city: str | None = None
+    address: str | None = None
+    zip_code: str | None = None
