@@ -12,3 +12,7 @@ class NotFoundException(AppException):
 
 class AlreadyExistsException(AppException):
     pass
+
+
+class NotAvailablseException(AppException):
+    pass

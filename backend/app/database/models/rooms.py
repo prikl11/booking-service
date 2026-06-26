@@ -16,6 +16,7 @@ class Room(Base):
     price: Mapped[decimal.Decimal] = mapped_column(Numeric(10, 2), server_default="0")
     discount: Mapped[decimal.Decimal | None] = mapped_column(Numeric(10, 2))
     personas: Mapped[int] = mapped_column(server_default="1")
+    quantity: Mapped[int] = mapped_column(server_default="1")
     is_active: Mapped[bool] = mapped_column(server_default="true")
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())

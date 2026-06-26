@@ -11,6 +11,7 @@ class RoomBase(BaseModel):
     price: Decimal
     discount: Decimal | None = None
     personas: int
+    quantity: int
     is_active: bool
 
 
@@ -26,6 +27,7 @@ class RoomResponse(BaseModel):
     price: Decimal
     discount: Decimal | None = None
     personas: int
+    quantity: int
     is_active: bool
     created_at: datetime
     updated_at: datetime
@@ -41,3 +43,4 @@ class RoomUpdate(BaseModel):
     discount: Decimal | None = None
     personas: int | None = None
     is_active: bool | None = None
+    quantity: int | None = None
