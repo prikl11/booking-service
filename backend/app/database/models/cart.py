@@ -14,4 +14,4 @@ class Cart(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     user: Mapped["User"] = relationship(back_populates="carts")
-    bookings: Mapped[list["Booking"]] = relationship(back_populates="cart")
+    bookings: Mapped[list["Booking"]] = relationship(back_populates="cart", cascade="all, delete-orphan")
