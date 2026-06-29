@@ -125,9 +125,6 @@ async def update_rooms_quantity(db: AsyncSession, room_id: int, delta: int) -> R
         raise NotAvailablseException("Number of rooms can not be negative")
     room.quantity += delta
     
-    await db.commit()
-    await db.refresh(room)
-
     return room
 
 
