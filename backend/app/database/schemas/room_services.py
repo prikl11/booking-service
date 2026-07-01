@@ -17,7 +17,3 @@ class RoomServiceResponse(BaseModel):
     service: ServiceResponse
 
     model_config = {"from_attributes": True}
-
-
-class RoomServiceUpdate(BaseModel):
-    service_id: int | None = None
