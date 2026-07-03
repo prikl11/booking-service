@@ -17,7 +17,3 @@ class HotelServiceResponse(BaseModel):
     service: ServiceResponse
 
     model_config = {"from_attributes": True}
-
-
-class HotelServiceUpdate(BaseModel):
-    service_id: int | None = None

@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Sequence
 
 from app.database.models import RoomService
-from app.database.schemas import RoomServiceCreate, RoomServiceBase
+from app.database.schemas import RoomServiceCreate
 from app.utils.exceptions import NotAvailablseException, NotFoundException, AlreadyExistsException
 
 
@@ -89,13 +89,14 @@ async def create_room_service(db: AsyncSession, room_service: RoomServiceCreate)
 
 async def delete_room_service(
         db: AsyncSession,
-        room_service: RoomServiceBase,
+        room_id: int,
+        service_id: int,
 ) -> RoomService:
     """Delete and return a room service"""
     existing = await get_room_service_by_service_and_room_ids(
         db=db, 
-        room_id=room_service.room_id, 
-        service_id=room_service.service_id
+        room_id=room_id, 
+        service_id=service_id
         )
     
     db.delete(existing)
