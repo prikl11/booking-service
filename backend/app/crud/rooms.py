@@ -2,7 +2,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Sequence
 from decimal import Decimal
 
-from app.database.models import Room
+from app.database.models import Room, RoomBed
+from app.database.models.room_beds import BedType
 from app.database.schemas import RoomCreate, RoomUpdate
 from app.utils.exceptions import NotFoundException, AlreadyExistsException, NotAvailablseException
 
@@ -19,6 +20,8 @@ def apply_room_filters(query, filters: dict):
         query = query.where(Room.personas <= filters.get("personas_max"))
     if filters.get("discount") is True:
         query = query.where(Room.discount > 0)
+    if filters.get("bed_type") is not None:
+        query = query.join(RoomBed).where(RoomBed.bed_type == filters.get("bed_type")).distinct()
 
     sort_fields = {
         "name": Room.name,
@@ -40,6 +43,7 @@ async def get_all_rooms(
         personas_min: int | None = None,
         personas_max: int | None = None,
         discount: bool | None = None,
+        bed_type: str | BedType = None,
         sort_by: str | None = None,
         order: str | None = None,
         skip: int = 0,
@@ -53,6 +57,7 @@ async def get_all_rooms(
         "personas_min": personas_min,
         "personas_max": personas_max,
         "discount": discount,
+        "bed_type": bed_type,
         "sort_by": sort_by,
         "order": order,
     })
@@ -68,6 +73,7 @@ async def get_all_rooms_by_hotel(
         personas_min: int | None = None,
         personas_max: int | None = None,
         discount: bool | None = None,
+        bed_type: str | BedType = None,
         sort_by: str | None = None,
         order: str | None = None,
         skip: int = 0,
@@ -83,6 +89,7 @@ async def get_all_rooms_by_hotel(
         "personas_min": personas_min,
         "personas_max": personas_max,
         "discount": discount,
+        "bed_type": bed_type,
         "sort_by": sort_by,
         "order": order,
     })
