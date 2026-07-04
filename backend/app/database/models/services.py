@@ -15,3 +15,4 @@ class Service(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     hotel_services: Mapped[list["HotelService"]] = relationship(back_populates="service")
+    room_services: Mapped[list["RoomService"]] = relationship(back_populates="service")

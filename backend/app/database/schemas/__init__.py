@@ -5,8 +5,8 @@ from .cart import CartBase, CartCreate, CartResponse
 from .rooms import RoomBase, RoomCreate, RoomResponse, RoomUpdate
 from .services import ServiceBase, ServiceCreate, ServiceResponse, ServiceUpdate
 from .hotel_images import HotelImageBase, HotelImageCreate, HotelImageResponse, HotelImageUpdate
-from .hotel_services import HotelResponse, HotelServiceBase, HotelServiceCreate, HotelServiceResponse
+from .hotel_services import HotelServiceBase, HotelServiceCreate, HotelServiceResponse
 from .hotel_staff import HotelStaffBase, HotelStaffCreate, HotelStaffResponse, HotelStaffUpdate
 from .room_beds import RoomBedBase, RoomBedCreate, RoomBedResponse, RoomBedUpdate
 from .room_images import RoomImageBase, RoomImageCreate, RoomImageResponse, RoomImageUpdate
-from .room_services import RoomServiceBase, RoomServiceCreate, RoomServiceResponse, RoomServiceUpdate
+from .room_services import RoomServiceBase, RoomServiceCreate, RoomServiceResponse
