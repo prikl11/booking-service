@@ -1,5 +1,5 @@
-import asyncio
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from app.api.router import router
@@ -13,6 +13,8 @@ from app.utils.exceptions import (
 app = FastAPI()
 
 app.include_router(router=router)
+
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
 
 @app.exception_handler(NotAvailablseException)

@@ -24,13 +24,17 @@ async def get_service_by_id(db: AsyncSession, service_id: int) -> Service:
     return result
 
 
-async def create_service(db: AsyncSession, service: ServiceCreate) -> Service:
+async def create_service(
+        db: AsyncSession,
+        service: ServiceCreate,
+        image_url: str
+) -> Service:
     """Create and return a new service"""
     existing = await db.execute(select(Service).where(Service.name == service.name))
     if existing.scalar_one_or_none():
         raise AlreadyExistsException("Service already exists")
     
-    created_service = Service(**service.model_dump())
+    created_service = Service(**service.model_dump(), image_url=image_url)
 
     db.add(created_service)
     await db.commit()
@@ -43,11 +47,16 @@ async def update_service(
         db: AsyncSession,
         service_id: int,
         updated_service: ServiceUpdate,
+        image_url: str | None = None
 ) -> Service:
     """Update and return a service"""
     service = await get_service_by_id(db=db, service_id=service_id)
 
-    for key, value in updated_service.model_dump(exclude_unset=True).items():
+    updated_data = updated_service.model_dump(exclude_unset=True)
+    if image_url is not None:
+        updated_data["image_url"] = image_url
+
+    for key, value in updated_data.items():
         setattr(service, key, value)
 
     await db.commit()

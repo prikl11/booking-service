@@ -3,7 +3,6 @@ from datetime import datetime
 
 class ServiceBase(BaseModel):
     name: str
-    image_url: str | None = None
 
 
 class ServiceCreate(ServiceBase):
@@ -12,6 +11,7 @@ class ServiceCreate(ServiceBase):
 
 class ServiceResponse(ServiceBase):
     id: int
+    image_url: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -20,4 +20,3 @@ class ServiceResponse(ServiceBase):
 
 class ServiceUpdate(BaseModel):
     name: str | None = None
-    image_url: str | None = None
