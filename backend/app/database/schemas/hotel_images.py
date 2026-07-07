@@ -4,7 +4,6 @@ from app.database.schemas.hotels import HotelResponse
 
 class HotelImageBase(BaseModel):
     hotel_id: int
-    image_url: str
 
 
 class HotelImageCreate(HotelImageBase):
@@ -17,7 +16,3 @@ class HotelImageResponse(BaseModel):
     image_url: str
 
     model_config = {"from_attributes": True}
-
-
-class HotelImageUpdate(BaseModel):
-    image_url: str | None = None

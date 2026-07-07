@@ -10,7 +10,7 @@ from app.utils.exceptions import (
 )
 
 
-app = FastAPI()
+app = FastAPI(title="Booking Service API")
 
 app.include_router(router=router)
 
