@@ -1,10 +1,11 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Sequence
+from sqlalchemy.orm import selectinload
 from decimal import Decimal
 
 from app.database.models import Room, RoomBed
 from app.database.models.room_beds import BedType
-from app.database.schemas import RoomCreate, RoomUpdate
+from app.database.schemas import RoomCreate, RoomUpdate, RoomResponse
 from app.utils.exceptions import NotFoundException, AlreadyExistsException, NotAvailablseException
 
 
@@ -100,10 +101,15 @@ async def get_all_rooms_by_hotel(
 
 async def get_room_by_id(db: AsyncSession, room_id: int) -> Room:
     """Return room by id or None if not found"""
-    result = await db.get(Room, room_id)
-    if not result:
+    result = await db.execute(
+        select(Room)
+        .options(selectinload(Room.hotel))
+        .where(Room.id == room_id)
+    )
+    room = result.scalar_one_or_none()
+    if not room:
         raise NotFoundException("Room not found")
-    return result
+    return room
 
 
 async def create_room(db: AsyncSession, room: RoomCreate) -> Room:
@@ -156,7 +162,9 @@ async def delete_room(db: AsyncSession, room_id: int) -> Room:
     """Delete and return a room"""
     existing_room = await get_room_by_id(db=db, room_id=room_id)
 
-    db.delete(existing_room)
+    response_data = RoomResponse.model_validate(existing_room)
+
+    await db.delete(existing_room)
     await db.commit()
 
-    return existing_room
+    return response_data

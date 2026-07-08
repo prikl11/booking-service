@@ -1,8 +1,9 @@
 from sqlalchemy import select, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database.models import HotelStaff
-from app.database.schemas import HotelStaffCreate, HotelStaffUpdate
+from app.database.schemas import HotelStaffCreate, HotelStaffUpdate, HotelStaffResponse
 from app.utils.exceptions import NotFoundException, AlreadyExistsException
 
 
@@ -56,13 +57,21 @@ async def get_hotel_staff_by_user_and_hotel_ids(
     """
     Return a hotel staff by user's and hotel's IDs
     """
-    result = await db.execute(select(HotelStaff).where(
-        HotelStaff.user_id == user_id,
-        HotelStaff.hotel_id == hotel_id,
-    ))
-    if result.scalar_one_or_none() is None:
+    result = await db.execute(
+        select(HotelStaff)
+        .options(
+            selectinload(HotelStaff.user),
+            selectinload(HotelStaff.hotel),
+        )
+        .where(
+            HotelStaff.user_id == user_id,
+            HotelStaff.hotel_id == hotel_id,
+        )
+    )
+    hotel_staff = result.scalar_one_or_none()
+    if hotel_staff is None:
         raise NotFoundException("Hotel staff not found")
-    return result.scalar_one_or_none()
+    return hotel_staff
 
 
 async def create_hotel_staff(db: AsyncSession, hotel_staff: HotelStaffCreate) -> HotelStaff:
@@ -117,7 +126,9 @@ async def delete_hotel_staff(
         hotel_id=hotel_id,
     )
 
-    db.delete(existing)
+    response_data = HotelStaffResponse.model_validate(existing)
+
+    await db.delete(existing)
     await db.commit()
 
-    return existing
+    return response_data

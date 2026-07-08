@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Sequence, select
 
-from app.database.schemas import UserCreate, UserUpdate
+from app.database.schemas import UserCreate, UserUpdate, UserResponse
 from app.database.models import User
 from app.utils.exceptions import AlreadyExistsException, NotFoundException
 from app.utils.security import hash_password
@@ -69,8 +69,10 @@ async def delete_user(db: AsyncSession, user_id: int) -> User:
     user = await db.get(User, user_id)
     if not user:
         raise NotFoundException("User not found")
-    
-    db.delete(user)
+
+    response_data = UserResponse.model_validate(user)
+
+    await db.delete(user)
     await db.commit()
 
-    return user
+    return response_data

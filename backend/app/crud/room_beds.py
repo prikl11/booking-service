@@ -1,8 +1,9 @@
 from sqlalchemy import select, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.database.schemas import RoomBedCreate, RoomBedUpdate
-from app.database.models import RoomBed
+from app.database.schemas import RoomBedCreate, RoomBedUpdate, RoomBedResponse
+from app.database.models import Room, RoomBed
 from app.utils.exceptions import NotFoundException, AlreadyExistsException
 
 
@@ -36,10 +37,15 @@ async def get_room_beds_by_room_id(
 
 async def get_room_bed_by_id(db: AsyncSession, room_bed_id: int) -> RoomBed:
     """Return a room bed by ID or None if not found"""
-    result = await db.get(RoomBed, room_bed_id)
-    if not result:
+    result = await db.execute(
+        select(RoomBed)
+        .options(selectinload(RoomBed.room).selectinload(Room.hotel))
+        .where(RoomBed.id == room_bed_id)
+    )
+    room_bed = result.scalar_one_or_none()
+    if not room_bed:
         raise NotFoundException("Room bed not found")
-    return result
+    return room_bed
 
 
 async def create_room_bed(db: AsyncSession, room_bed: RoomBedCreate) -> RoomBed:
@@ -81,7 +87,9 @@ async def delete_room_bed(db: AsyncSession, room_bed_id: int) -> RoomBed:
     """Delete and return a room bed"""
     existing = await get_room_bed_by_id(db=db, room_bed_id=room_bed_id)
 
-    db.delete(existing)
+    response_data = RoomBedResponse.model_validate(existing)
+
+    await db.delete(existing)
     await db.commit()
 
-    return existing
+    return response_data

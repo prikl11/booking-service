@@ -1,8 +1,9 @@
 from sqlalchemy import select, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.database.models import RoomImage
-from app.database.schemas import RoomImageCreate, RoomImageUpdate
+from app.database.models import Room, RoomImage
+from app.database.schemas import RoomImageCreate, RoomImageUpdate, RoomImageResponse
 from app.utils.exceptions import NotAvailablseException, NotFoundException, AlreadyExistsException
 
 
@@ -37,10 +38,15 @@ async def get_room_image_by_id(db: AsyncSession, room_image_id: int) -> RoomImag
     """
     Return a room's image by ID or None if not found
     """
-    result = await db.get(RoomImage, room_image_id)
-    if not result:
+    result = await db.execute(
+        select(RoomImage)
+        .options(selectinload(RoomImage.room).selectinload(Room.hotel))
+        .where(RoomImage.id == room_image_id)
+    )
+    room_image = result.scalar_one_or_none()
+    if not room_image:
         raise NotFoundException("Room image not found")
-    return result
+    return room_image
 
 
 async def create_room_image(db: AsyncSession, room_image: RoomImageCreate) -> RoomImage:
@@ -75,7 +81,9 @@ async def delete_room_image(db: AsyncSession, room_image_id: int) -> RoomImage:
     """Delete and return a room image"""
     existing = await get_room_image_by_id(db=db, room_image_id=room_image_id)
 
-    db.delete(existing)
+    response_data = RoomImageResponse.model_validate(existing)
+
+    await db.delete(existing)
     await db.commit()
 
-    return existing
+    return response_data

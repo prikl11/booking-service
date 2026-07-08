@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import or_, select, Sequence, not_
+from sqlalchemy.orm import selectinload
 
-from app.database.models import Booking
-from app.database.schemas import BookingCreate, BookingUpdate
+from app.database.models import Booking, Cart, Room
+from app.database.schemas import BookingCreate, BookingUpdate, BookingResponse
 from app.crud.rooms import get_room_by_id, update_rooms_quantity
 from app.crud.cart import get_cart_by_id
 from app.utils.exceptions import NotFoundException, NotAvailablseException, AlreadyExistsException
@@ -52,10 +53,18 @@ async def get_all_bookings_by_room(
 
 async def get_booking_by_id(db: AsyncSession, booking_id: int) -> Booking:
     """Return a booking by its ID"""
-    result = await db.get(Booking, booking_id)
-    if not result:
+    result = await db.execute(
+        select(Booking)
+        .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
+        .where(Booking.id == booking_id)
+    )
+    booking = result.scalar_one_or_none()
+    if not booking:
         raise NotFoundException("Booking not found")
-    return result
+    return booking
 
 
 async def create_booking(db: AsyncSession, booking: BookingCreate) -> Booking:
@@ -129,8 +138,10 @@ async def delete_booking(db: AsyncSession, booking_id: int) -> Booking:
     existing = await get_booking_by_id(db=db, booking_id=booking_id)
     room = await get_room_by_id(db=db, room_id=existing.room_id)
 
-    db.delete(existing)
+    response_data = BookingResponse.model_validate(existing)
+
+    await db.delete(existing)
     await update_rooms_quantity(db=db, room_id=room.id, delta=+1)
     await db.commit()
 
-    return existing
+    return response_data

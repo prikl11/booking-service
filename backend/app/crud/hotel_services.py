@@ -1,8 +1,9 @@
 from sqlalchemy import select, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database.models import HotelService
-from app.database.schemas import HotelServiceCreate
+from app.database.schemas import HotelServiceCreate, HotelServiceResponse
 from app.utils.exceptions import NotFoundException, AlreadyExistsException
 
 
@@ -60,13 +61,21 @@ async def get_hotel_services_by_hotel_and_service_ids(
     """
     Return a hotel service by hotel and service IDs
     """
-    result = await db.execute(select(HotelService).where(
-        HotelService.hotel_id == hotel_id,
-        HotelService.service_id == service_id,
-    ))
-    if result.scalar_one_or_none() is None:
+    result = await db.execute(
+        select(HotelService)
+        .options(
+            selectinload(HotelService.hotel),
+            selectinload(HotelService.service),
+        )
+        .where(
+            HotelService.hotel_id == hotel_id,
+            HotelService.service_id == service_id,
+        )
+    )
+    hotel_service = result.scalar_one_or_none()
+    if hotel_service is None:
         raise NotFoundException("Hotel service not found")
-    return result.scalar_one_or_none()
+    return hotel_service
 
 
 async def create_hotel_service(db: AsyncSession, hotel_service: HotelServiceCreate) -> HotelService:
@@ -101,7 +110,9 @@ async def delete_hotel_service(
         service_id=service_id,
     )
 
-    db.delete(existing)
+    response_data = HotelServiceResponse.model_validate(existing)
+
+    await db.delete(existing)
     await db.commit()
 
-    return existing
+    return response_data

@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Sequence
+from sqlalchemy.orm import selectinload
 
-from app.database.models import RoomService
-from app.database.schemas import RoomServiceCreate
+from app.database.models import Room, RoomService
+from app.database.schemas import RoomServiceCreate, RoomServiceResponse
 from app.utils.exceptions import NotAvailablseException, NotFoundException, AlreadyExistsException
 
 
@@ -60,13 +61,21 @@ async def get_room_service_by_service_and_room_ids(
     """
     Return a room service by room and service IDs or None if not found
     """
-    result = await db.execute(select(RoomService).where(
-        RoomService.room_id == room_id,
-        RoomService.service_id == service_id,
-    ))
-    if result.scalar_one_or_none() is None:
+    result = await db.execute(
+        select(RoomService)
+        .options(
+            selectinload(RoomService.room).selectinload(Room.hotel),
+            selectinload(RoomService.service),
+        )
+        .where(
+            RoomService.room_id == room_id,
+            RoomService.service_id == service_id,
+        )
+    )
+    room_service = result.scalar_one_or_none()
+    if room_service is None:
         raise NotFoundException("Room service not found")
-    return result.scalar_one_or_none()
+    return room_service
 
 
 async def create_room_service(db: AsyncSession, room_service: RoomServiceCreate) -> RoomService:
@@ -99,7 +108,9 @@ async def delete_room_service(
         service_id=service_id
         )
     
-    db.delete(existing)
+    response_data = RoomServiceResponse.model_validate(existing)
+
+    await db.delete(existing)
     await db.commit()
 
-    return existing
+    return response_data

@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, Sequence
 
 from app.database.models import Service
-from app.database.schemas import ServiceCreate, ServiceUpdate
+from app.database.schemas import ServiceCreate, ServiceUpdate, ServiceResponse
 from app.utils.exceptions import NotAvailablseException, NotFoundException, AlreadyExistsException
 
 
@@ -69,7 +69,9 @@ async def delete_service(db: AsyncSession, service_id: int) -> Service:
     """Delete and return a service"""
     service = await get_service_by_id(db=db, service_id=service_id)
 
-    db.delete(service)
+    response_data = ServiceResponse.model_validate(service)
+
+    await db.delete(service)
     await db.commit()
 
-    return service
+    return response_data

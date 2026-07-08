@@ -2,7 +2,7 @@ from sqlalchemy import select, Sequence
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.models import Hotel
-from app.database.schemas import HotelCreate, HotelUpdate
+from app.database.schemas import HotelCreate, HotelUpdate, HotelResponse
 from app.utils.exceptions import AlreadyExistsException, NotFoundException
 
 
@@ -87,8 +87,10 @@ async def delete_hotel(db: AsyncSession, hotel_id: int) -> Hotel:
     existing_hotel = await db.get(Hotel, hotel_id)
     if not existing_hotel:
         raise NotFoundException("Hotel not found")
-    
-    db.delete(existing_hotel)
+
+    response_data = HotelResponse.model_validate(existing_hotel)
+
+    await db.delete(existing_hotel)
     await db.commit()
 
-    return existing_hotel
+    return response_data
