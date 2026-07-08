@@ -13,7 +13,15 @@ async def get_all_hotel_services(
         limit: int = 20,
 ) -> Sequence[HotelService]:
     """Return a paginated list of hotel services"""
-    result = await db.execute(select(HotelService).offset(skip).limit(limit))
+    result = await db.execute(
+        select(HotelService)
+        .options(
+            selectinload(HotelService.hotel),
+            selectinload(HotelService.service),
+        )
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 
@@ -28,6 +36,10 @@ async def get_hotel_services_by_hotel_id(
     """
     result = await db.execute(
         select(HotelService)
+        .options(
+            selectinload(HotelService.hotel),
+            selectinload(HotelService.service),
+        )
         .where(HotelService.hotel_id == hotel_id)
         .offset(skip)
         .limit(limit)
@@ -46,6 +58,10 @@ async def get_hotel_services_by_service_id(
     """
     result = await db.execute(
         select(HotelService)
+        .options(
+            selectinload(HotelService.hotel),
+            selectinload(HotelService.service),
+        )
         .where(HotelService.service_id == service_id)
         .offset(skip)
         .limit(limit)
@@ -91,7 +107,7 @@ async def create_hotel_service(db: AsyncSession, hotel_service: HotelServiceCrea
 
     db.add(created)
     await db.commit()
-    await db.refresh(created)
+    await db.refresh(created, attribute_names=["hotel", "service"])
 
     return created
 
