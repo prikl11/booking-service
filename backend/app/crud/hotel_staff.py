@@ -13,7 +13,15 @@ async def get_all_hotell_staff(
         limit: int = 20,
 ) -> Sequence[HotelStaff]:
     """Return a paginated list of hotel staff"""
-    result = await db.execute(select(HotelStaff).offset(skip).limit(limit))
+    result = await db.execute(
+        select(HotelStaff)
+        .options(
+            selectinload(HotelStaff.hotel),
+            selectinload(HotelStaff.user),
+        )
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 
@@ -26,6 +34,10 @@ async def get_hotel_staff_by_user_id(
     """Return a paginated list of hotel staff by user ID"""
     result = await db.execute(
         select(HotelStaff)
+        .options(
+            selectinload(HotelStaff.hotel),
+            selectinload(HotelStaff.user),
+        )
         .where(HotelStaff.user_id == user_id)
         .offset(skip)
         .limit(limit)
@@ -42,6 +54,10 @@ async def get_hotel_staff_by_hotel_id(
     """Return a paginated list of hotel staff by hotel ID"""
     result = await db.execute(
         select(HotelStaff)
+        .options(
+            selectinload(HotelStaff.hotel),
+            selectinload(HotelStaff.user),
+        )
         .where(HotelStaff.hotel_id == hotel_id)
         .offset(skip)
         .limit(limit)
