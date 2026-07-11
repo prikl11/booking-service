@@ -6,7 +6,6 @@ class UserBase(BaseModel):
     last_name: str
     email: EmailStr
     phone: str
-    image_url: str | None = None
 
 
 class UserCreate(UserBase):
@@ -15,6 +14,7 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     id: int
+    image_url: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -27,5 +27,4 @@ class UserUpdate(BaseModel):
     email: EmailStr | None = None
     phone: str | None = None
     password: str | None = None
-    image_url: str | None = None
     is_admin: bool | None = None

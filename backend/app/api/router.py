@@ -6,11 +6,15 @@ from app.api.routers import (
     hotel_images_router,
     hotel_services_router,
     hotel_staff_router,
+    auth_router,
+    user_router,
 )
 
 
 router = APIRouter()
 
+router.include_router(router=auth_router)
+router.include_router(router=user_router)
 router.include_router(router=service_router)
 router.include_router(router=hotel_router)
 router.include_router(router=hotel_images_router)

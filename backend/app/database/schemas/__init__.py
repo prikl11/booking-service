@@ -10,3 +10,4 @@ from .hotel_staff import HotelStaffBase, HotelStaffCreate, HotelStaffResponse, H
 from .room_beds import RoomBedBase, RoomBedCreate, RoomBedResponse, RoomBedUpdate
 from .room_images import RoomImageBase, RoomImageCreate, RoomImageResponse, RoomImageUpdate
 from .room_services import RoomServiceBase, RoomServiceCreate, RoomServiceResponse
+from .auth import TokenResponse

@@ -26,7 +26,11 @@ async def get_user_by_phone(db: AsyncSession, phone: str) -> User | None:
     result = await db.execute(select(User).where(User.phone == phone))
     return result.scalar_one_or_none()
 
-async def create_user(db: AsyncSession, user: UserCreate) -> User:
+async def create_user(
+        db: AsyncSession, 
+        user: UserCreate,
+        image_url: str | None = None,
+        ) -> User:
     """Create and return a new user"""
     existing_user = await db.execute(select(User).where(
         User.email == user.email,
@@ -37,7 +41,9 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
     
     user_data = user.model_dump()
     user_data["hashed_password"] = hash_password(password=user_data.pop("password"))
-
+    if image_url is not None:
+        user_data["image_url"] = image_url
+        
     created_user = User(**user_data)
 
     db.add(created_user)
@@ -46,15 +52,24 @@ async def create_user(db: AsyncSession, user: UserCreate) -> User:
 
     return created_user
 
-async def update_user(db: AsyncSession, user_id: int, user_update: UserUpdate) -> User:
+async def update_user(
+        db: AsyncSession, 
+        user_id: int, 
+        user_update: UserUpdate,
+        image_url: str | None = None,
+        ) -> User:
     """Update and return user"""
     user = await db.get(User, user_id)
     if not user:
         raise NotFoundException("User not found")
     
     update_data = user_update.model_dump(exclude_unset=True)
+    
     if "password" in update_data:
         update_data["hashed_password"] = hash_password(update_data.pop("password"))
+
+    if image_url is not None:
+        update_data["image_url"] = image_url
     
     for key, value in update_data.items():
         setattr(user, key, value)
