@@ -13,7 +13,15 @@ async def get_all_room_services(
         limit: int = 20,
 ) -> Sequence[RoomService]:
     """Return a paginates list of room services"""
-    result = await db.execute(select(RoomService).offset(skip).limit(limit))
+    result = await db.execute(
+        select(RoomService)
+        .options(
+            selectinload(RoomService.room).selectinload(Room.hotel),
+            selectinload(RoomService.service),
+        )
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 
@@ -28,6 +36,10 @@ async def get_room_services_by_room_id(
     """
     result = await db.execute(
         select(RoomService)
+        .options(
+            selectinload(RoomService.room).selectinload(Room.hotel),
+            selectinload(RoomService.service),
+        )
         .where(RoomService.room_id == room_id)
         .offset(skip)
         .limit(limit)
@@ -46,6 +58,10 @@ async def get_room_services_by_service_id(
     """
     result = await db.execute(
         select(RoomService)
+        .options(
+            selectinload(RoomService.room).selectinload(Room.hotel),
+            selectinload(RoomService.service),
+        )
         .where(RoomService.service_id == service_id)
         .offset(skip)
         .limit(limit)
@@ -89,11 +105,25 @@ async def create_room_service(db: AsyncSession, room_service: RoomServiceCreate)
     
     created = RoomService(**room_service.model_dump())
 
+    room_id = created.room_id
+    service_id = created.service_id
+
     db.add(created)
     await db.commit()
-    await db.refresh(created)
 
-    return created
+    result = await db.execute(
+        select(RoomService)
+        .options(
+            selectinload(RoomService.room).selectinload(Room.hotel),
+            selectinload(RoomService.service),
+        )
+        .where(
+            RoomService.room_id == room_id,
+            RoomService.service_id == service_id,
+        )
+    )
+
+    return result.scalar_one()
 
 
 async def delete_room_service(

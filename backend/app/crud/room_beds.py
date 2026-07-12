@@ -13,7 +13,11 @@ async def get_all_room_beds(
         limit: int = 20,
 ) -> Sequence[RoomBed]:
     """Return a paginated list of room beds"""
-    result = await db.execute(select(RoomBed).offset(skip).limit(limit))
+    result = await db.execute(
+        select(RoomBed)
+        .options(selectinload(RoomBed.room).selectinload(Room.hotel))
+        .offset(skip)
+        .limit(limit))
     return result.scalars().all()
 
 
@@ -28,6 +32,7 @@ async def get_room_beds_by_room_id(
     """
     result = await db.execute(
         select(RoomBed)
+        .options(selectinload(RoomBed.room).selectinload(Room.hotel))
         .where(RoomBed.room_id == room_id)
         .offset(skip)
         .limit(limit)
@@ -63,7 +68,18 @@ async def create_room_bed(db: AsyncSession, room_bed: RoomBedCreate) -> RoomBed:
     await db.commit()
     await db.refresh(created)
 
-    return created
+    bed_id = created.id
+    room_id = created.room_id
+    result = await db.execute(
+        select(RoomBed)
+        .options(selectinload(RoomBed.room).selectinload(Room.hotel))
+        .where(
+            RoomBed.id == bed_id,
+            RoomBed.room_id == room_id,
+            )
+    )
+
+    return result.scalar_one()
 
 
 async def update_room_bed(

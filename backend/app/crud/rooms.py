@@ -51,7 +51,7 @@ async def get_all_rooms(
         limit: int = 20,
 ) -> Sequence[Room]:
     """Return a paginated list of all of rooms"""
-    query = select(Room)
+    query = select(Room).options(selectinload(Room.hotel))
     query = apply_room_filters(query=query, filters={
         "price_min": price_min,
         "price_max": price_max,
@@ -83,7 +83,7 @@ async def get_all_rooms_by_hotel(
     """
     Return a paginated list of rooms by hotel with params
     """
-    query = select(Room).where(Room.hotel_id == hotel_id)
+    query = select(Room).where(Room.hotel_id == hotel_id).options(selectinload(Room.hotel))
     query = apply_room_filters(query=query, filters={
         "price_min": price_min,
         "price_max": price_max,
@@ -125,7 +125,7 @@ async def create_room(db: AsyncSession, room: RoomCreate) -> Room:
 
     db.add(created_room)
     await db.commit()
-    await db.refresh(created_room)
+    await db.refresh(created_room, attribute_names=["hotel"])
 
     return created_room
 
@@ -153,7 +153,7 @@ async def update_room(
         setattr(existing_room, key, value)
 
     await db.commit()
-    await db.refresh(existing_room)
+    await db.refresh(existing_room, attribute_names=["hotel"])
 
     return existing_room
 

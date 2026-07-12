@@ -5,3 +5,7 @@ from .hotel_services import router as hotel_services_router
 from .hotel_staff import router as hotel_staff_router
 from .auth import router as auth_router
 from .users import router as user_router
+from .rooms import router as room_router
+from .room_services import router as room_services_router
+from .room_images import router as room_images_router
+from .room_beds import router as room_beds_router

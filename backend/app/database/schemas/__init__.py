@@ -8,6 +8,6 @@ from .hotel_images import HotelImageBase, HotelImageCreate, HotelImageResponse
 from .hotel_services import HotelServiceBase, HotelServiceCreate, HotelServiceResponse
 from .hotel_staff import HotelStaffBase, HotelStaffCreate, HotelStaffResponse, HotelStaffUpdate
 from .room_beds import RoomBedBase, RoomBedCreate, RoomBedResponse, RoomBedUpdate
-from .room_images import RoomImageBase, RoomImageCreate, RoomImageResponse, RoomImageUpdate
+from .room_images import RoomImageBase, RoomImageCreate, RoomImageResponse
 from .room_services import RoomServiceBase, RoomServiceCreate, RoomServiceResponse
 from .auth import TokenResponse

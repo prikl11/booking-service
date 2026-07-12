@@ -57,7 +57,7 @@ async def create(
     return result
 
 
-@router.delete("/", response_model=HotelImageResponse)
+@router.delete("/{image_id}", response_model=HotelImageResponse)
 async def delete(db: SessionDep, image_id: int):
     result = await delete_hotel_image(db=db, hotel_image_id=image_id)
     return result

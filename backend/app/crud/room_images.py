@@ -3,8 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database.models import Room, RoomImage
-from app.database.schemas import RoomImageCreate, RoomImageUpdate, RoomImageResponse
-from app.utils.exceptions import NotAvailablseException, NotFoundException, AlreadyExistsException
+from app.database.schemas import RoomImageCreate, RoomImageResponse
+from app.utils.exceptions import NotFoundException
 
 
 async def get_all_room_images(
@@ -13,7 +13,12 @@ async def get_all_room_images(
         limit: int = 20,
 ) -> Sequence[RoomImage]:
     """Return a paginated list of all room images"""
-    result = await db.execute(select(RoomImage).offset(skip).limit(limit))
+    result = await db.execute(
+        select(RoomImage)
+        .options(selectinload(RoomImage.room).selectinload(Room.hotel))
+        .offset(skip)
+        .limit(limit)
+    )
     return result.scalars().all()
 
 
@@ -27,6 +32,7 @@ async def get_room_images_by_room_id(
     Return a paginated list of all room images by room's ID
     """
     result = await db.execute(select(RoomImage)
+                              .options(selectinload(RoomImage.room).selectinload(Room.hotel))
                               .where(RoomImage.room_id == room_id)
                               .offset(skip)
                               .limit(limit)
@@ -49,32 +55,29 @@ async def get_room_image_by_id(db: AsyncSession, room_image_id: int) -> RoomImag
     return room_image
 
 
-async def create_room_image(db: AsyncSession, room_image: RoomImageCreate) -> RoomImage:
+async def create_room_image(
+        db: AsyncSession,
+        room_image: RoomImageCreate,
+        image_url: str,
+) -> RoomImage:
     """Create and return a new room image"""
-    created = RoomImage(**room_image.model_dump())
+    created = RoomImage(**room_image.model_dump(), image_url=image_url)
+
+    image_id = created.id
+    room_id = created.room_id
 
     db.add(created)
     await db.commit()
-    await db.refresh(created)
+    result = await db.execute(
+        select(RoomImage)
+        .options(selectinload(RoomImage.room).selectinload(Room.hotel))
+        .where(
+            RoomImage.id == image_id,
+            RoomImage.room_id == room_id,
+            )
+    )
 
-    return created
-
-
-async def update_room_image(
-        db: AsyncSession,
-        room_image_id: int,
-        updated_room_image: RoomImageUpdate,
-) -> RoomImage:
-    """Update and return a room image"""
-    existing = await get_room_image_by_id(db=db, room_image_id=room_image_id)
-
-    for key, value in updated_room_image.model_dump(exclude_unset=True).items():
-        setattr(existing, key, value)
-
-    await db.commit()
-    await db.refresh(existing)
-
-    return existing
+    return result.scalar_one()
 
 
 async def delete_room_image(db: AsyncSession, room_image_id: int) -> RoomImage:
