@@ -3,7 +3,7 @@ from sqlalchemy import select, Sequence
 
 from app.database.models import Service
 from app.database.schemas import ServiceCreate, ServiceUpdate, ServiceResponse
-from app.utils.exceptions import NotAvailablseException, NotFoundException, AlreadyExistsException
+from app.utils.exceptions import NotAvailableException, NotFoundException, AlreadyExistsException
 
 
 async def get_all_services(

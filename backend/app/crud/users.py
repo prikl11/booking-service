@@ -12,19 +12,27 @@ async def get_all_users(db: AsyncSession, skip: int = 0, limit: int = 20) -> Seq
     return results.scalars().all()
 
 async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
-    """Return a user by ID or None if not found"""
+    """Return a user by ID"""
     result = await db.get(User, user_id)
+    if not result:
+        raise NotFoundException("User not found")
     return result
 
 async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
-    """Return a user by email or None if not found"""
-    result = await db.execute(select(User).where(User.email == email))
-    return result.scalar_one_or_none()
+    """Return a user by email"""
+    query = await db.execute(select(User).where(User.email == email))
+    result = query.scalars().all()
+    if result is None:
+        raise NotFoundException("User not found")
+    return query
 
 async def get_user_by_phone(db: AsyncSession, phone: str) -> User | None:
-    """Return a user by phone or None if not found"""
-    result = await db.execute(select(User).where(User.phone == phone))
-    return result.scalar_one_or_none()
+    """Return a user by phone"""
+    query = await db.execute(select(User).where(User.phone == phone))
+    result = query.scalars().all()
+    if result is None:
+        raise NotFoundException("User not found")
+    return query
 
 
 async def set_admin(

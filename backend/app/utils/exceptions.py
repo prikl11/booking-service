@@ -14,5 +14,5 @@ class AlreadyExistsException(AppException):
     pass
 
 
-class NotAvailablseException(AppException):
+class NotAvailableException(AppException):
     pass

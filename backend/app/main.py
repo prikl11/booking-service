@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.router import router
 from app.utils.exceptions import (
-    NotAvailablseException,
+    NotAvailableException,
     NotFoundException,
     AlreadyExistsException,
 )
@@ -17,8 +17,8 @@ app.include_router(router=router)
 app.mount("/media", StaticFiles(directory="media"), name="media")
 
 
-@app.exception_handler(NotAvailablseException)
-async def not_available_exception_handler(request: Request, exc: NotAvailablseException):
+@app.exception_handler(NotAvailableException)
+async def not_available_exception_handler(request: Request, exc: NotAvailableException):
     return JSONResponse(
         status_code=400,
         content={"message": exc.message},

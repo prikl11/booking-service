@@ -6,7 +6,7 @@ from app.database.models import Booking, Cart, Room
 from app.database.schemas import BookingCreate, BookingUpdate, BookingResponse
 from app.crud.rooms import get_room_by_id, update_rooms_quantity
 from app.crud.cart import get_or_create_active_cart, get_active_cart_by_user_id
-from app.utils.exceptions import NotFoundException, NotAvailablseException, AlreadyExistsException
+from app.utils.exceptions import NotFoundException, NotAvailableException, AlreadyExistsException
 
 
 async def get_all_bookings(
@@ -90,29 +90,6 @@ async def get_bookings_by_user_and_cart_ids(
     return result.scalars().all()
 
 
-async def get_booking_by_id_and_user_id(
-        db: AsyncSession,
-        booking_id: int,
-        user_id: int,
-) -> Booking:
-    query = await db.execute(
-        select(Booking)
-        .join(Cart)
-        .options(
-            selectinload(Booking.cart).selectinload(Cart.user),
-            selectinload(Booking.room).selectinload(Room.hotel),
-        )
-        .where(
-            Booking.id == booking_id,
-            Cart.user_id == user_id,
-        )
-    )
-    result = query.scalar_one_or_none()
-    if result is None:
-        raise NotFoundException("Booking not found")
-    return result
-
-
 async def get_booking_by_id(db: AsyncSession, booking_id: int) -> Booking:
     """Return a booking by its ID"""
     result = await db.execute(
@@ -152,7 +129,7 @@ async def create_booking(
     room = await get_room_by_id(db=db, room_id=booking.room_id)
 
     if booking.people_quantity > room.personas:
-        raise NotAvailablseException(f"The number of people must be less than {room.personas}")
+        raise NotAvailableException(f"The number of people must be less than {room.personas}")
     
     booking_data = booking.model_dump()
     

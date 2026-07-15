@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database.models import Room, RoomService
 from app.database.schemas import RoomServiceCreate, RoomServiceResponse
-from app.utils.exceptions import NotAvailablseException, NotFoundException, AlreadyExistsException
+from app.utils.exceptions import NotAvailableException, NotFoundException, AlreadyExistsException
 
 
 async def get_all_room_services(

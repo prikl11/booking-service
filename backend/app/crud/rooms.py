@@ -6,7 +6,7 @@ from decimal import Decimal
 from app.database.models import Room, RoomBed
 from app.database.models.room_beds import BedType
 from app.database.schemas import RoomCreate, RoomUpdate, RoomResponse
-from app.utils.exceptions import NotFoundException, AlreadyExistsException, NotAvailablseException
+from app.utils.exceptions import NotFoundException, AlreadyExistsException, NotAvailableException
 
 
 def apply_room_filters(query, filters: dict):
@@ -135,7 +135,7 @@ async def update_rooms_quantity(db: AsyncSession, room_id: int, delta: int) -> R
     room = await get_room_by_id(db=db, room_id=room_id)
     
     if room.quantity + delta < 0:
-        raise NotAvailablseException("Number of rooms can not be negative")
+        raise NotAvailableException("Number of rooms can not be negative")
     room.quantity += delta
     
     return room
