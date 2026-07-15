@@ -13,19 +13,48 @@ async def get_all_carts(
         limit: int = 20,
 ) -> Sequence[Cart]:
     """Return a paginated list of carts"""
-    result = await db.execute(select(Cart).offset(skip).limit(limit))
+    result = await db.execute(
+        select(Cart)
+        .options(selectinload(Cart.user))
+        .offset(skip)
+        .limit(limit)
+        )
     return result.scalars().all()
 
 
-async def get_all_carts_by_user(
+async def get_all_carts_by_user_id(
         db: AsyncSession,
         user_id: int,
         skip: int = 0,
         limit: int = 20,
 ) -> Sequence[Cart]:
     """Return a paginated list of carts by user's ID"""
-    result = await db.execute(select(Cart).where(Cart.user_id == user_id).offset(skip).limit(limit))
+    result = await db.execute(
+        select(Cart)
+        .options(selectinload(Cart.user))
+        .where(Cart.user_id == user_id)
+        .offset(skip)
+        .limit(limit))
     return result.scalars().all()
+
+
+async def get_active_cart_by_user_id(
+        db: AsyncSession,
+        user_id: int,
+) -> Cart:
+    """Return last active user's cart"""
+    query = await db.execute(
+        select(Cart)
+        .options(selectinload(Cart.user))
+        .where(
+            Cart.user_id == user_id,
+            Cart.is_active == True,
+        )
+    )
+    result = query.scalar_one_or_none()
+    if result is None:
+        raise NotFoundException("Cart not found")
+    return result
 
 
 async def get_cart_by_id(db: AsyncSession, cart_id: int) -> Cart:
@@ -41,15 +70,36 @@ async def get_cart_by_id(db: AsyncSession, cart_id: int) -> Cart:
     return cart
 
 
+async def checkout_cart(db: AsyncSession, cart_id: int) -> Cart:
+    """Change cart's status to inactive"""
+    cart = await get_cart_by_id(db=db, cart_id=cart_id)
+    cart.is_active = False
+
+    await db.commit()
+    await db.refresh(cart, attribute_names=["user"])
+
+    return cart
+
+
 async def create_cart(db: AsyncSession, cart: CartCreate) -> Cart:
     """Create and return a new cart"""
     new_cart = Cart(**cart.model_dump())
 
     db.add(new_cart)
     await db.commit()
-    await db.refresh(new_cart)
+    await db.refresh(new_cart, attribute_names=["user"])
 
     return new_cart
+
+
+async def get_or_create_active_cart(db: AsyncSession, user_id: int) -> Cart:
+    """
+    Get active user's cart if exists or create if not found
+    """
+    try:
+        return await get_active_cart_by_user_id(db=db, user_id=user_id)
+    except NotFoundException:
+        return await create_cart(db=db, cart=CartCreate(user_id=user_id))
 
 
 async def delete_cart(db: AsyncSession, cart_id: int) -> Cart:

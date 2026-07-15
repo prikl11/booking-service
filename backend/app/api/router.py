@@ -12,6 +12,8 @@ from app.api.routers import (
     room_services_router,
     room_images_router,
     room_beds_router,
+    booking_router,
+    cart_router
 )
 
 
@@ -28,3 +30,5 @@ router.include_router(router=room_router)
 router.include_router(router=room_services_router)
 router.include_router(router=room_images_router)
 router.include_router(router=room_beds_router)
+router.include_router(router=booking_router)
+router.include_router(router=cart_router)

@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from app.database.models import Booking, Cart, Room
 from app.database.schemas import BookingCreate, BookingUpdate, BookingResponse
 from app.crud.rooms import get_room_by_id, update_rooms_quantity
-from app.crud.cart import get_cart_by_id
+from app.crud.cart import get_or_create_active_cart, get_active_cart_by_user_id
 from app.utils.exceptions import NotFoundException, NotAvailablseException, AlreadyExistsException
 
 
@@ -15,7 +15,14 @@ async def get_all_bookings(
         limit: int = 20,
 ) -> Sequence[Booking]:
     """Return a paginated list of bookings by all of users"""
-    result = await db.execute(select(Booking).offset(skip).limit(limit))
+    result = await db.execute(
+        select(Booking)
+        .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
+        .offset(skip)
+        .limit(limit))
     return result.scalars().all()
 
 
@@ -28,6 +35,10 @@ async def get_all_bookings_by_cart(
     """Return a paginated list of bookings by cart's ID"""
     result = await db.execute(
             select(Booking)
+            .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
             .where(Booking.cart_id == cart_id)
             .offset(skip)
             .limit(limit)
@@ -44,11 +55,62 @@ async def get_all_bookings_by_room(
     """Return a paginated list of bookings by room's ID"""
     result = await db.execute(
         select(Booking)
+        .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
         .where(Booking.room_id == room_id)
         .offset(skip)
         .limit(limit)
     )
     return result.scalars().all()
+
+
+async def get_bookings_by_user_and_cart_ids(
+        db: AsyncSession,
+        user_id: int,
+        cart_id: int,
+        skip: int = 0,
+        limit: int = 20,
+) -> Booking:
+    result = await db.execute(
+        select(Booking)
+        .join(Cart)
+        .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
+        .where(
+            Booking.cart_id == cart_id,
+            Cart.user_id == user_id
+        )
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+
+async def get_booking_by_id_and_user_id(
+        db: AsyncSession,
+        booking_id: int,
+        user_id: int,
+) -> Booking:
+    query = await db.execute(
+        select(Booking)
+        .join(Cart)
+        .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
+        .where(
+            Booking.id == booking_id,
+            Cart.user_id == user_id,
+        )
+    )
+    result = query.scalar_one_or_none()
+    if result is None:
+        raise NotFoundException("Booking not found")
+    return result
 
 
 async def get_booking_by_id(db: AsyncSession, booking_id: int) -> Booking:
@@ -67,7 +129,11 @@ async def get_booking_by_id(db: AsyncSession, booking_id: int) -> Booking:
     return booking
 
 
-async def create_booking(db: AsyncSession, booking: BookingCreate) -> Booking:
+async def create_booking(
+        db: AsyncSession, 
+        booking: BookingCreate,
+        user_id: int,
+        ) -> Booking:
     """
     Create booking, calc the total price and update the number of rooms
     """
@@ -82,12 +148,15 @@ async def create_booking(db: AsyncSession, booking: BookingCreate) -> Booking:
     if existing.scalar_one_or_none():
         raise AlreadyExistsException("Booking already exists")
     
+    cart = await get_or_create_active_cart(db=db, user_id=user_id)
     room = await get_room_by_id(db=db, room_id=booking.room_id)
 
     if booking.people_quantity > room.personas:
         raise NotAvailablseException(f"The number of people must be less than {room.personas}")
     
     booking_data = booking.model_dump()
+    
+    booking_data["cart_id"] = cart.id
 
     if room.discount:
         booking_data["total_price"] = room.price * (1 - room.discount)
@@ -100,8 +169,17 @@ async def create_booking(db: AsyncSession, booking: BookingCreate) -> Booking:
     await update_rooms_quantity(db=db, room_id=room.id, delta=-1)
     await db.commit()
     await db.refresh(created_booking)
+    
+    result = await db.execute(
+        select(Booking)
+        .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
+        .where(Booking.id == created_booking.id)
+    )
 
-    return created_booking
+    return result.scalar_one()
 
 
 async def update_booking(

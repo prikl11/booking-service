@@ -9,3 +9,5 @@ from .rooms import router as room_router
 from .room_services import router as room_services_router
 from .room_images import router as room_images_router
 from .room_beds import router as room_beds_router
+from .bookings import router as booking_router
+from .cart import router as cart_router

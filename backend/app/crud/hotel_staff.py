@@ -7,6 +7,22 @@ from app.database.schemas import HotelStaffCreate, HotelStaffUpdate, HotelStaffR
 from app.utils.exceptions import NotFoundException, AlreadyExistsException
 
 
+async def is_hotel_staff(
+        db: AsyncSession,
+        hotel_id: int,
+        user_id: int,
+) -> bool:
+    """Check if user is a staff member of the hotel"""
+    result = await db.execute(
+        select(HotelStaff)
+        .where(
+            HotelStaff.hotel_id == hotel_id,
+            HotelStaff.user_id == user_id,
+        )
+    )
+    return result.scalar_one_or_none() is not None
+
+
 async def get_all_hotell_staff(
         db: AsyncSession,
         skip: int = 0,

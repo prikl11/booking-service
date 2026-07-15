@@ -26,6 +26,20 @@ async def get_user_by_phone(db: AsyncSession, phone: str) -> User | None:
     result = await db.execute(select(User).where(User.phone == phone))
     return result.scalar_one_or_none()
 
+
+async def set_admin(
+        db: AsyncSession,
+        user_id: int,
+) -> User:
+    user = await get_user_by_id(db=db, user_id=user_id)
+    user.is_admin = True
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user
+
+
 async def create_user(
         db: AsyncSession, 
         user: UserCreate,

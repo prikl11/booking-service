@@ -2,7 +2,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, UploadFile
 
-from app.api.dependencies import SessionDep, CurrentUserDep
+from app.api.dependencies import (
+    SessionDep,
+    CurrentUserDep,
+    AdminUserDep,
+)
 from app.api.forms import UserUpdateFormData
 from app.utils.files import save_upload_file
 from app.database.schemas import (
@@ -14,6 +18,7 @@ from app.crud.users import (
     get_user_by_email,
     get_user_by_id,
     get_user_by_phone,
+    set_admin,
     update_user,
     delete_user,
 )
@@ -56,6 +61,16 @@ async def get_by_phone(db: SessionDep, phone: str):
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_by_id(db: SessionDep, user_id: int):
     result = await get_user_by_id(db=db, user_id=user_id)
+    return result
+
+
+@router.post("/admin/{user_id}", response_model=UserResponse)
+async def set_user_admin(
+    db: SessionDep,
+    admin: AdminUserDep,
+    user_id: int,
+):
+    result = await set_admin(db=db, user_id=user_id)
     return result
 
 

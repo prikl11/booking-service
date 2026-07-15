@@ -7,7 +7,6 @@ from app.database.schemas.rooms import RoomResponse
 from app.database.models.bookings import Status
 
 class BookingBase(BaseModel):
-    cart_id: int
     room_id: int
     people_quantity: int
     comments: str | None = None
