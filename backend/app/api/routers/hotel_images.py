@@ -13,7 +13,10 @@ from app.crud.hotel_images import (
     delete_hotel_image,
 )
 from app.utils.files import save_upload_file
-from app.api.dependencies import SessionDep
+from app.api.dependencies import SessionDep, CurrentUserDep
+from app.crud.hotel_staff import check_hotel_role
+from app.database.models.hotel_staff import Role
+from app.utils.exceptions import ForbiddenException
 
 
 router = APIRouter(prefix="/hotel-images", tags=["hotel-images"])
@@ -49,15 +52,39 @@ async def get_by_id(db: SessionDep, image_id: int):
 @router.post("/", response_model=HotelImageResponse)
 async def create(
     db: SessionDep,
+    current_user: CurrentUserDep,
     hotel_id: Annotated[int, Form()],
     file: Annotated[UploadFile, File()],
 ):
-    file_path = await save_upload_file(file=file, directory="hotels")
-    result = await create_hotel_image(db=db, hotel_image=HotelImageCreate(hotel_id=hotel_id), image_url=file_path)
-    return result
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=hotel_id,
+        roles=[Role.owner, Role.administrator,],
+    )
+    if check or current_user.is_admin:
+        file_path = await save_upload_file(file=file, directory="hotels")
+        result = await create_hotel_image(db=db, hotel_image=HotelImageCreate(hotel_id=hotel_id), image_url=file_path)
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.delete("/{image_id}", response_model=HotelImageResponse)
-async def delete(db: SessionDep, image_id: int):
-    result = await delete_hotel_image(db=db, hotel_image_id=image_id)
-    return result
+async def delete(
+    db: SessionDep, 
+    image_id: int,
+    current_user: CurrentUserDep,
+    ):
+    image = await get_hotel_image_by_id(db=db, hotel_image_id=image_id)
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=image.hotel_id,
+        roles=[Role.owner, Role.administrator,],
+    )
+    if check or current_user.is_admin:
+        result = await delete_hotel_image(db=db, hotel_image_id=image_id)
+        return result
+    else:
+        raise ForbiddenException("No permission")

@@ -9,6 +9,7 @@ from app.crud.bookings import (
     get_all_bookings,
     get_all_bookings_by_cart,
     get_all_bookings_by_room,
+    get_all_bookings_by_hotel,
     get_bookings_by_user_and_cart_ids,
     get_booking_by_id,
     create_booking,
@@ -16,13 +17,15 @@ from app.crud.bookings import (
     delete_booking,
 )
 from app.crud.cart import get_or_create_active_cart
-from app.crud.hotel_staff import is_hotel_staff
+from app.crud.hotel_staff import check_hotel_role
 from app.crud.rooms import get_room_by_id
 from app.api.dependencies import (
     SessionDep,
     CurrentUserDep,
     AdminUserDep,
 )
+from app.database.models.hotel_staff import Role
+from app.utils.exceptions import ForbiddenException
 
 
 router = APIRouter(prefix="/bookings", tags=["bookings"])
@@ -105,15 +108,14 @@ async def get_bookings_by_room(
 ):
    room = await get_room_by_id(db=db, room_id=room_id)
 
-   if not (
-       await is_hotel_staff(
-           db=db,
-           hotel_id=room.hotel_id,
-           user_id=current_user.id,
-       )
-       or current_user.is_admin
-   ):
-       raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No permission")
+   check = await check_hotel_role(
+       db=db,
+       user_id=current_user.id,
+       hotel_id=room.hotel_id,
+       roles=[Role.owner, Role.administrator, Role.manager]
+   )
+   if not (check or current_user.is_admin):
+       raise ForbiddenException("No permission")
    
    result = await get_all_bookings_by_room(
        db=db,
@@ -122,6 +124,32 @@ async def get_bookings_by_room(
        limit=limit,
    )
    return result
+
+
+@router.get("/by-hotel/{hotel_id}", response_model=list[BookingResponse])
+async def get_bookings_by_hotel(
+    db: SessionDep,
+    hotel_id: int,
+    current_user: CurrentUserDep,
+    skip: int = 0,
+    limit: int = 20,
+):
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=hotel_id,
+        roles=[Role.owner, Role.administrator, Role.manager],
+    ) 
+    if check or current_user.is_admin:
+        result = await get_all_bookings_by_hotel(
+            db=db,
+            hotel_id=hotel_id,
+            skip=skip,
+            limit=limit,
+        )
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.get("/{booking_id}", response_model=BookingResponse)

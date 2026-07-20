@@ -12,7 +12,10 @@ from app.crud.hotel_services import (
     create_hotel_service,
     delete_hotel_service,
 )
-from app.api.dependencies import SessionDep
+from app.api.dependencies import SessionDep, CurrentUserDep
+from app.crud.hotel_staff import check_hotel_role
+from app.database.models.hotel_staff import Role
+from app.utils.exceptions import ForbiddenException
 
 
 router = APIRouter(prefix="/hotel-services", tags=["hotel-services"])
@@ -78,9 +81,19 @@ async def get_hotel_service(
 async def create(
     db: SessionDep,
     hotel_service: HotelServiceCreate,
+    current_user: CurrentUserDep,
 ):
-    result = await create_hotel_service(db=db, hotel_service=hotel_service)
-    return result
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=hotel_service.hotel_id,
+        roles=[Role.owner, Role.administrator],
+    )
+    if check or current_user.is_admin:
+        result = await create_hotel_service(db=db, hotel_service=hotel_service)
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.delete("/{hotel_id}/{service_id}", response_model=HotelServiceResponse)
@@ -88,10 +101,20 @@ async def delete(
     db: SessionDep,
     hotel_id: int,
     service_id: int,
+    current_user: CurrentUserDep,
 ):
-    result = await delete_hotel_service(
+    check = await check_hotel_role(
         db=db,
+        user_id=current_user.id,
         hotel_id=hotel_id,
-        service_id=service_id,
+        roles=[Role.owner, Role.administrator],
     )
-    return result
+    if check or current_user.is_admin:
+        result = await delete_hotel_service(
+            db=db,
+            hotel_id=hotel_id,
+            service_id=service_id,
+        )
+        return result
+    else: 
+        raise ForbiddenException("No permission")

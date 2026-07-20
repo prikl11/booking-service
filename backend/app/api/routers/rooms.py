@@ -15,8 +15,11 @@ from app.crud.rooms import (
     update_room,
     delete_room,
 )
-from app.api.dependencies import SessionDep
+from app.api.dependencies import SessionDep, CurrentUserDep
 from app.database.models.room_beds import BedType
+from app.database.models.hotel_staff import Role
+from app.crud.hotel_staff import check_hotel_role
+from app.utils.exceptions import ForbiddenException
 
 
 router = APIRouter(prefix="/rooms", tags=["rooms"])
@@ -89,9 +92,22 @@ async def get_room(db: SessionDep, room_id: int):
 
 
 @router.post("/", response_model=RoomResponse)
-async def create(db: SessionDep, room: RoomCreate):
-    result = await create_room(db=db, room=room)
-    return result
+async def create(
+    db: SessionDep, 
+    room: RoomCreate,
+    current_user: CurrentUserDep,
+    ):
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=room.hotel_id,
+        roles=[Role.owner, Role.administrator,],
+    )
+    if check or current_user.is_admin:
+        result = await create_room(db=db, room=room)
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.patch("/{room_id}", response_model=RoomResponse)
@@ -99,16 +115,41 @@ async def update(
     db: SessionDep,
     room_id: int,
     room: RoomUpdate,
+    current_user: CurrentUserDep,
 ):
-    result = await update_room(
+    room_in_db = await get_room_by_id(db=db, room_id=room_id)
+    check = await check_hotel_role(
         db=db,
-        room_id=room_id,
-        updated_room=room,
+        user_id=current_user.id,
+        hotel_id=room_in_db.hotel_id,
+        roles=[Role.owner, Role.administrator,],
     )
-    return result
+    if check or current_user.is_admin:
+        result = await update_room(
+            db=db,
+            room_id=room_id,
+            updated_room=room,
+        )
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.delete("/{room_id}", response_model=RoomResponse)
-async def delete(db: SessionDep, room_id: int):
-    result = await delete_room(db=db, room_id=room_id)
-    return result
+async def delete(
+    db: SessionDep, 
+    room_id: int,
+    current_user: CurrentUserDep,
+    ):
+    room = await get_room_by_id(db=db, room_id=room_id)
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=room.hotel_id,
+        roles=[Role.owner, Role.administrator,],
+    )
+    if check or current_user.is_admin:
+        result = await delete_room(db=db, room_id=room_id)
+        return result
+    else:
+        raise ForbiddenException("No permission")

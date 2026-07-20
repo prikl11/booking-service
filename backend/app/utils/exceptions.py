@@ -16,3 +16,7 @@ class AlreadyExistsException(AppException):
 
 class NotAvailableException(AppException):
     pass
+
+
+class ForbiddenException(AppException):
+    pass

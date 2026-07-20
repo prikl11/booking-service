@@ -9,7 +9,11 @@ from app.crud.room_services import (
     create_room_service,
     delete_room_service,
 )
-from app.api.dependencies import SessionDep
+from app.api.dependencies import SessionDep, CurrentUserDep
+from app.crud.hotel_staff import check_hotel_role
+from app.crud.rooms import get_room_by_id
+from app.database.models.hotel_staff import Role
+from app.utils.exceptions import ForbiddenException
 
 
 router = APIRouter(prefix="/room-services", tags=["room-services"])
@@ -76,9 +80,23 @@ async def get_room_service(
 
 
 @router.post("/", response_model=RoomServiceResponse)
-async def create(db: SessionDep, room_service: RoomServiceCreate):
-    result = await create_room_service(db=db, room_service=room_service)
-    return result
+async def create(
+    db: SessionDep, 
+    room_service: RoomServiceCreate,
+    current_user: CurrentUserDep,
+    ):
+    room = await get_room_by_id(db=db, room_id=room_service.room_id)
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=room.hotel_id,
+        roles=[Role.owner, Role.administrator],
+    )
+    if check or current_user.is_admin:
+        result = await create_room_service(db=db, room_service=room_service)
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.delete("/{room_id}/{service_id}", response_model=RoomServiceResponse)
@@ -86,10 +104,21 @@ async def delete(
     db: SessionDep,
     room_id: int,
     service_id: int,
+    current_user: CurrentUserDep,
 ):
-    result = await delete_room_service(
+    room = await get_room_by_id(db=db, room_id=room_id)
+    check = await check_hotel_role(
         db=db,
-        room_id=room_id,
-        service_id=service_id,
+        user_id=current_user.id,
+        hotel_id=room.hotel_id,
+        roles=[Role.owner, Role.administrator],
     )
-    return result
+    if check or current_user.is_admin:
+        result = await delete_room_service(
+            db=db,
+            room_id=room_id,
+            service_id=service_id,
+        )
+        return result
+    else:
+        raise ForbiddenException("No permission")

@@ -13,7 +13,12 @@ from app.crud.room_beds import (
     update_room_bed,
     delete_room_bed,
 )
-from app.api.dependencies import SessionDep
+from app.api.dependencies import SessionDep, CurrentUserDep
+from app.crud.hotel_staff import check_hotel_role
+from app.crud.rooms import get_room_by_id
+from app.database.models.hotel_staff import Role
+from app.utils.exceptions import ForbiddenException
+
 
 
 router = APIRouter(prefix="/room-beds", tags=["room-beds"])
@@ -56,9 +61,23 @@ async def get_room_bed(db: SessionDep, bed_id: int):
 
 
 @router.post("/", response_model=RoomBedResponse)
-async def create(db: SessionDep, room_bed: RoomBedCreate):
-    result = await create_room_bed(db=db, room_bed=room_bed)
-    return result
+async def create(
+    db: SessionDep, 
+    room_bed: RoomBedCreate,
+    current_user: CurrentUserDep,
+    ):
+    room = await get_room_by_id(db=db, room_id=room_bed.room_id)
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=room.hotel_id,
+        roles=[Role.owner, Role.administrator],
+    )
+    if check or current_user.is_admin:
+        result = await create_room_bed(db=db, room_bed=room_bed)
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.patch("/{bed_id}", response_model=RoomBedResponse)
@@ -66,16 +85,43 @@ async def update(
     db: SessionDep,
     bed_id: int,
     room_bed: RoomBedUpdate,
+    current_user: CurrentUserDep,
 ):
-    result = await update_room_bed(
+    existing_bed = await get_room_bed_by_id(db=db, room_bed_id=bed_id)
+    room = await get_room_by_id(db=db, room_id=existing_bed.room_id)
+    check = await check_hotel_role(
         db=db,
-        room_bed_id=bed_id,
-        updated_room_bed=room_bed,
+        user_id=current_user.id,
+        hotel_id=room.hotel_id,
+        roles=[Role.owner, Role.administrator],
     )
-    return result
+    if check or current_user.is_admin:
+        result = await update_room_bed(
+            db=db,
+            room_bed_id=bed_id,
+            updated_room_bed=room_bed,
+        )
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.delete("/{bed_id}", response_model=RoomBedResponse)
-async def delete(db: SessionDep, bed_id: int):
-    result = await delete_room_bed(db=db, room_bed_id=bed_id)
-    return result
+async def delete(
+    db: SessionDep, 
+    bed_id: int,
+    current_user: CurrentUserDep,
+    ):
+    room_bed = await get_room_bed_by_id(db=db, room_bed_id=bed_id)
+    room = await get_room_by_id(db=db, room_id=room_bed.room_id)
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=room.hotel_id,
+        roles=[Role.owner, Role.administrator],
+    )
+    if check or current_user.is_admin:
+        result = await delete_room_bed(db=db, room_bed_id=bed_id)
+        return result
+    else:
+        raise ForbiddenException("No permission")

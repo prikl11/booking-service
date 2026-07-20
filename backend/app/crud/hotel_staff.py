@@ -3,8 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database.models import HotelStaff
+from app.database.models.hotel_staff import Role
 from app.database.schemas import HotelStaffCreate, HotelStaffUpdate, HotelStaffResponse
-from app.utils.exceptions import NotFoundException, AlreadyExistsException
+from app.utils.exceptions import (
+    NotFoundException,
+    AlreadyExistsException,
+)
 
 
 async def is_hotel_staff(
@@ -104,6 +108,23 @@ async def get_hotel_staff_by_user_and_hotel_ids(
     if hotel_staff is None:
         raise NotFoundException("Hotel staff not found")
     return hotel_staff
+
+
+async def check_hotel_role(
+        db: AsyncSession,
+        user_id: int,
+        hotel_id: int,
+        roles: list[Role],
+) -> bool:
+    """Check if user has one of the allowed roles in this hotel"""
+    result = await db.execute(
+        select(HotelStaff).where(
+            HotelStaff.user_id == user_id,
+            HotelStaff.hotel_id == hotel_id,
+            HotelStaff.role.in_(roles),
+        )
+    )
+    return result.scalar_one_or_none() is not None
 
 
 async def create_hotel_staff(db: AsyncSession, hotel_staff: HotelStaffCreate) -> HotelStaff:

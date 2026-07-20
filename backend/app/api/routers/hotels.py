@@ -9,7 +9,10 @@ from app.crud.hotels import (
     delete_hotel,
 )
 from app.database.schemas import HotelResponse, HotelCreate, HotelUpdate
-from app.api.dependencies import SessionDep
+from app.api.dependencies import SessionDep, AdminUserDep, CurrentUserDep
+from app.crud.hotel_staff import check_hotel_role
+from app.utils.exceptions import ForbiddenException
+from app.database.models.hotel_staff import Role
 
 
 router = APIRouter(prefix="/hotels", tags=["hotels"])
@@ -50,7 +53,11 @@ async def get_hotel(db: SessionDep, hotel_id: int):
 
 
 @router.post("/", response_model=HotelResponse)
-async def create(db: SessionDep, hotel: HotelCreate):
+async def create(
+    db: SessionDep, 
+    hotel: HotelCreate,
+    admin: AdminUserDep,
+    ):
     result = await create_hotel(db=db, hotel=hotel)
     return result
 
@@ -60,12 +67,35 @@ async def update(
     db: SessionDep,
     hotel_id: int,
     hotel: HotelUpdate,
+    current_user: CurrentUserDep
 ):
-    result = await update_hotel(db=db, hotel_id=hotel_id, hotel=hotel)
-    return result
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=hotel_id,
+        roles=[Role.owner, Role.administrator,]
+    )
+    if check or current_user.is_admin:
+        result = await update_hotel(db=db, hotel_id=hotel_id, hotel=hotel)
+        return result
+    else:
+        raise ForbiddenException("No permission")
 
 
 @router.delete("/{hotel_id}", response_model=HotelResponse)
-async def delete(db: SessionDep, hotel_id: int):
-    result = await delete_hotel(db=db, hotel_id=hotel_id)
-    return result
+async def delete(
+    db: SessionDep, 
+    hotel_id: int,
+    current_user: CurrentUserDep,
+    ):
+    check = await check_hotel_role(
+        db=db,
+        user_id=current_user.id,
+        hotel_id=hotel_id,
+        roles=[Role.owner,],
+    )
+    if check or current_user.is_admin:
+        result = await delete_hotel(db=db, hotel_id=hotel_id)
+        return result
+    else:
+        raise ForbiddenException("No permission")

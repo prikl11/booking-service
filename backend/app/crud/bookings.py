@@ -66,6 +66,27 @@ async def get_all_bookings_by_room(
     return result.scalars().all()
 
 
+async def get_all_bookings_by_hotel(
+        db: AsyncSession,
+        hotel_id: int,
+        skip: int = 0,
+        limit: int = 20,
+) -> Sequence[Booking]:
+    """Return a paginates list of bookings by hotel's ID"""
+    result = await db.execute(
+        select(Booking)
+        .join(Room)
+        .options(
+            selectinload(Booking.cart).selectinload(Cart.user),
+            selectinload(Booking.room).selectinload(Room.hotel),
+        )
+        .where(Room.hotel_id == hotel_id)
+        .offset(skip)
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+
 async def get_bookings_by_user_and_cart_ids(
         db: AsyncSession,
         user_id: int,
