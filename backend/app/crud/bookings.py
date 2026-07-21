@@ -4,8 +4,8 @@ from sqlalchemy.orm import selectinload
 
 from app.database.models import Booking, Cart, Room
 from app.database.schemas import BookingCreate, BookingUpdate, BookingResponse
-from app.crud.rooms import get_room_by_id, update_rooms_quantity
-from app.crud.cart import get_or_create_active_cart, get_active_cart_by_user_id
+from app.crud.rooms import get_room_by_id, update_rooms_quantity, get_room_by_id_for_update
+from app.crud.cart import get_or_create_active_cart
 from app.utils.exceptions import NotFoundException, NotAvailableException, AlreadyExistsException
 
 
@@ -147,7 +147,7 @@ async def create_booking(
         raise AlreadyExistsException("Booking already exists")
     
     cart = await get_or_create_active_cart(db=db, user_id=user_id)
-    room = await get_room_by_id(db=db, room_id=booking.room_id)
+    room = await get_room_by_id_for_update(db=db, room_id=booking.room_id)
 
     if booking.people_quantity > room.personas:
         raise NotAvailableException(f"The number of people must be less than {room.personas}")
@@ -164,7 +164,7 @@ async def create_booking(
     created_booking = Booking(**booking_data)
 
     db.add(created_booking)
-    await update_rooms_quantity(db=db, room_id=room.id, delta=-1)
+    await update_rooms_quantity(room=room, delta=-1)
     await db.commit()
     await db.refresh(created_booking)
     

@@ -100,7 +100,7 @@ async def get_all_rooms_by_hotel(
 
 
 async def get_room_by_id(db: AsyncSession, room_id: int) -> Room:
-    """Return room by id or None if not found"""
+    """Return room by id"""
     result = await db.execute(
         select(Room)
         .options(selectinload(Room.hotel))
@@ -108,6 +108,20 @@ async def get_room_by_id(db: AsyncSession, room_id: int) -> Room:
     )
     room = result.scalar_one_or_none()
     if not room:
+        raise NotFoundException("Room not found")
+    return room
+
+
+async def get_room_by_id_for_update(db: AsyncSession, room_id: int) -> Room:
+    """Get room by id with FOR UPDATE"""
+    result = await db.execute(
+        select(Room)
+        .options(selectinload(Room.hotel))
+        .where(Room.id == room_id)
+        .with_for_update()
+    )
+    room = result.scalar_one_or_none()
+    if room is None:
         raise NotFoundException("Room not found")
     return room
 
@@ -130,10 +144,8 @@ async def create_room(db: AsyncSession, room: RoomCreate) -> Room:
     return created_room
 
 
-async def update_rooms_quantity(db: AsyncSession, room_id: int, delta: int) -> Room:
+async def update_rooms_quantity(room: Room, delta: int) -> Room:
     """Change the number of rooms"""
-    room = await get_room_by_id(db=db, room_id=room_id)
-    
     if room.quantity + delta < 0:
         raise NotAvailableException("Number of rooms can not be negative")
     room.quantity += delta
